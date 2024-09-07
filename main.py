@@ -8,7 +8,7 @@ import json
 
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
-# Funzione per leggere la chiave API dal file API_KEY.txt
+# Configura la tua chiave API direttamente nel codice
 def read_api_key(file_path):
     with open(file_path, 'r') as file:
         return file.read().strip()
@@ -35,8 +35,8 @@ model = genai.GenerativeModel(
     generation_config=generation_config,
 )
 
-# Prompt aggiornato per diversi tipi di documenti
-def analyze_file_with_gemini(file_content, extracted_text):
+
+def analyze_file_with_gemini(image=None, extracted_text=None, is_image=False):
     """
     Analizza un file utilizzando il modello Gemini e restituisce le informazioni rilevanti.
     """
@@ -45,7 +45,7 @@ def analyze_file_with_gemini(file_content, extracted_text):
 
     Ti prego di analizzare attentamente il file allegato e di identificare le seguenti informazioni:
 
-    Testo estratto dal file: {extracted_text}
+    Testo estratto dall'immagine: {extracted_text}
 
     1. Identificazione del Tipo di Documento:
         - Se il file è una carta d'identità, estrai i seguenti dati:
@@ -56,30 +56,12 @@ def analyze_file_with_gemini(file_content, extracted_text):
             - Numero di fattura
             - Nome dell'emittente della fattura
             - Data della fattura
-        - Se il file è un contratto di lavoro, estrai i seguenti dati:
-            - Nome del dipendente
-            - Posizione lavorativa
-            - Stipendio annuale
-            - Data di inizio del contratto
-        - Se il file è una ricevuta di pagamento, estrai i seguenti dati:
-            - Nome del cliente
-            - Azienda emittente
-            - Importo pagato
-            - Data del pagamento
-        - Se il file è un preventivo, estrai i seguenti dati:
-            - Nome del cliente
-            - Nome dell'azienda emittente
-            - Prodotto o servizio quotato
-            - Quantità
-            - Prezzo unitario
-            - Totale
+        - Se il file è di un altro tipo di documento (es. contratto, certificato, ecc.), identifica il tipo e cerca di estrarre i dati rilevanti.
 
     2. Rinomina del File:
         - Se il file è una carta d'identità, rinomina il file nel formato: 'cid_Nome_Cognome'.
         - Se il file è una fattura, rinomina il file nel formato: 'fattura_Numero'.
-        - Se il file è un contratto di lavoro, rinomina il file nel formato: 'contratto_Nome_Cognome'.
-        - Se il file è una ricevuta di pagamento, rinomina il file nel formato: 'ricevuta_Nome_Cognome'.
-        - Se il file è un preventivo, rinomina il file nel formato: 'preventivo_Nome_Cognome'.
+        - Per altri tipi di documenti, rinomina il file con il tipo di documento e, se possibile, con altre informazioni identificative.
 
     3. Struttura dei Dati Utente:
         - Restituisci le informazioni sull'utente (nome, cognome e altri dati rilevanti) in un formato JSON, che includa anche il nuovo nome del file.
@@ -89,7 +71,10 @@ def analyze_file_with_gemini(file_content, extracted_text):
 
     try:
         # Se è un'immagine, passiamo l'immagine come oggetto Image, altrimenti solo il contenuto di testo
-        response = model.generate_content([prompt, extracted_text])
+        if is_image and image:
+            response = model.generate_content([prompt, image])
+        else:
+            response = model.generate_content([prompt, extracted_text])
 
         if response.candidates:
             candidate = response.candidates[0]
@@ -145,13 +130,17 @@ def process_file(file_path):
     Gestisce l'intero processo: analisi del file, rinomina e organizzazione.
     """
     try:
+        is_image = False
         if file_path.endswith('.txt'):
             extracted_text = extract_text_from_txt(file_path)
+            file_content = None  # I file di testo non necessitano di essere passati come contenuto
         else:
             extracted_text, img = extract_text_from_image(file_path)
+            file_content = img  # Passiamo l'immagine come oggetto PIL
+            is_image = True
 
         # Analizza il file con il modello Gemini
-        analysis_response = analyze_file_with_gemini(file_content=None, extracted_text=extracted_text)
+        analysis_response = analyze_file_with_gemini(image=file_content, extracted_text=extracted_text, is_image=is_image)
 
         # Rinomina e organizza il file basato sull'analisi
         new_file_path = rename_and_organize_file(file_path, analysis_response)

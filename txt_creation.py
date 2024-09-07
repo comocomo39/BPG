@@ -1,9 +1,11 @@
-import random
 import os
+import random
+from datetime import datetime
 
 # Dati finti per generare i documenti
 nomi = [
-    "MARIO ROSSI", "LUIGI BIANCHI", "ANNA VERDI", "MATTEO COMINI", "PASQUALE CROCCO"
+    "MARIO ROSSI", "LUIGI BIANCHI", "ANNA VERDI", "GIOVANNI NERI", "ELISA GALLI",
+    "CARLO FERRI", "MATTEO COMINI", "PASQUALE CROCCO", "PAOLO VERDE", "SARA VIOLA"
 ]
 aziende = [
     "Tech Solutions S.p.A.", "Smart Devices S.r.l.", "Innovative Software Ltd.",
@@ -12,9 +14,10 @@ aziende = [
 prodotti = [
     "Laptop", "Smartphone", "Tablet", "Monitor", "Stampante", "Cuffie", "Router", "Televisore"
 ]
-job_positions = [
-    "Sviluppatore Software", "Analista Dati", "Manager di Progetto", "Contabile", "Marketing Specialist"
+posizioni_lavorative = [
+    "Sviluppatore Software", "Analista Dati", "Responsabile Marketing", "Direttore Vendite", "Amministratore"
 ]
+
 quantita_max = 10
 importo_min = 100
 importo_max = 2000
@@ -23,102 +26,116 @@ importo_max = 2000
 os.makedirs("documenti_generati", exist_ok=True)
 
 
-# Funzione per generare un contratto di lavoro
-def genera_contratto_lavoro(customer_id):
+# Funzione per generare un contratto di lavoro con molti dati
+def genera_contratto(customer_id):
     nome = random.choice(nomi)
     azienda = random.choice(aziende)
-    posizione = random.choice(job_positions)
+    posizione = random.choice(posizioni_lavorative)
+    id_contratto = f"CT-{random.randint(1000, 9999)}"
+    id_dipendente = f"EMP-{random.randint(1000, 9999)}"
     stipendio_annuale = random.randint(25000, 60000)
+    data_inizio = datetime.now().strftime("%d/%m/%Y")
+    durata_mesi = random.randint(6, 36)
 
     contenuto_contratto = f"""
     CONTRATTO DI LAVORO
 
-    L'azienda {azienda} assume {nome} per la posizione di {posizione}.
-    Stipendio annuale: €{stipendio_annuale}
+    ID Contratto: {id_contratto}
+    ID Dipendente: {id_dipendente}
 
-    Inizio del contratto: 01/10/2024
-    Termini del contratto: il contratto è valido per un periodo di 12 mesi.
+    Azienda: {azienda}
+    Nome: {nome}
+    Posizione: {posizione}
+    Stipendio annuale: €{stipendio_annuale}
+    Data inizio: {data_inizio}
+    Durata: {durata_mesi} mesi
 
     Firma del dipendente: ____________________
     Firma del datore di lavoro: ____________________
-
-    Grazie per aver scelto {azienda}.
     """
 
-    # Salva il contratto in un file .txt
-    nome_file = f"contratto_lavoro_{customer_id}.txt"
+    nome_file = f"contratto_{id_contratto}.txt"
     with open(f"documenti_generati/{nome_file}", "w") as file:
         file.write(contenuto_contratto)
 
-
-# Funzione per generare una ricevuta di pagamento
-def genera_ricevuta_pagamento(customer_id):
-    nome = random.choice(nomi)
-    azienda = random.choice(aziende)
-    importo = round(random.uniform(importo_min, importo_max), 2)
-    data_pagamento = f"{random.randint(1, 28)}/09/2024"
-
-    contenuto_ricevuta = f"""
-    RICEVUTA DI PAGAMENTO
-
-    Nome: {nome}
-    Azienda: {azienda}
-    Data del pagamento: {data_pagamento}
-    Importo pagato: €{importo}
-
-    Metodo di pagamento: Carta di Credito
-
-    Grazie per il tuo pagamento!
-    """
-
-    # Salva la ricevuta in un file .txt
-    nome_file = f"ricevuta_pagamento_{customer_id}.txt"
-    with open(f"documenti_generati/{nome_file}", "w") as file:
-        file.write(contenuto_ricevuta)
+    return nome_file, id_contratto
 
 
-# Funzione per generare un preventivo
-def genera_preventivo(customer_id):
+# Funzione per generare una fattura con dati complessi
+def genera_fattura(customer_id):
     nome = random.choice(nomi)
     azienda = random.choice(aziende)
     prodotto = random.choice(prodotti)
     quantita = random.randint(1, quantita_max)
     prezzo_unitario = round(random.uniform(importo_min, importo_max), 2)
     totale = round(quantita * prezzo_unitario, 2)
+    numero_fattura = f"FT-{random.randint(1000, 9999)}"
+    id_cliente = f"CL-{random.randint(1000, 9999)}"
+    data_emissione = datetime.now().strftime("%d/%m/%Y")
 
-    contenuto_preventivo = f"""
-    PREVENTIVO
+    contenuto_fattura = f"""
+    FATTURA N. {numero_fattura}
 
-    Cliente: {nome}
+    ID Cliente: {id_cliente}
+    Nome Cliente: {nome}
     Azienda: {azienda}
+    Data di emissione: {data_emissione}
 
     Prodotto: {prodotto}
     Quantità: {quantita}
     Prezzo unitario: €{prezzo_unitario}
     Totale: €{totale}
 
-    Validità del preventivo: 30 giorni
-
-    Grazie per aver richiesto un preventivo a {azienda}.
+    Grazie per aver scelto {azienda}!
     """
 
-    # Salva il preventivo in un file .txt
-    nome_file = f"preventivo_{customer_id}.txt"
+    nome_file = f"fattura_{numero_fattura}.txt"
     with open(f"documenti_generati/{nome_file}", "w") as file:
-        file.write(contenuto_preventivo)
+        file.write(contenuto_fattura)
+
+    return nome_file, numero_fattura
 
 
-# Genera una serie di documenti
-def genera_documenti():
-    num_documenti = 10  # Numero di documenti di ogni tipo
+# Funzione per generare una ricevuta di pagamento collegata a una fattura
+def genera_ricevuta_pagamento(customer_id, numero_fattura):
+    nome = random.choice(nomi)
+    azienda = random.choice(aziende)
+    importo_pagato = round(random.uniform(importo_min, importo_max), 2)
+    numero_ricevuta = f"RC-{random.randint(1000, 9999)}"
+    data_pagamento = datetime.now().strftime("%d/%m/%Y")
 
-    for i in range(1, num_documenti + 1):
-        genera_contratto_lavoro(i)
-        genera_ricevuta_pagamento(i)
-        genera_preventivo(i)
+    contenuto_ricevuta = f"""
+    RICEVUTA DI PAGAMENTO N. {numero_ricevuta}
 
-    print(f"Generati {num_documenti * 3} documenti nella cartella 'documenti_generati'.")
+    Cliente: {nome}
+    Azienda: {azienda}
+    Data del pagamento: {data_pagamento}
+    Importo pagato: €{importo_pagato}
+
+    Fattura di riferimento: {numero_fattura}
+
+    Grazie per il tuo pagamento!
+    """
+
+    nome_file = f"ricevuta_{numero_ricevuta}.txt"
+    with open(f"documenti_generati/{nome_file}", "w") as file:
+        file.write(contenuto_ricevuta)
+
+    return nome_file, numero_ricevuta
 
 
-# Eseguire la generazione dei documenti
-genera_documenti()
+# Funzione per generare tutti i documenti per un cliente
+def genera_documenti_per_cliente(customer_id):
+    contratto_file, id_contratto = genera_contratto(customer_id)
+    fattura_file, numero_fattura = genera_fattura(customer_id)
+    ricevuta_file, numero_ricevuta = genera_ricevuta_pagamento(customer_id, numero_fattura)
+
+    print(f"Documenti generati per il cliente {customer_id}:")
+    print(f"Contratto: {contratto_file} (ID Contratto: {id_contratto})")
+    print(f"Fattura: {fattura_file} (Numero Fattura: {numero_fattura})")
+    print(f"Ricevuta: {ricevuta_file} (Numero Ricevuta: {numero_ricevuta})")
+
+
+# Genera documenti per 5 clienti come esempio
+for i in range(1, 6):
+    genera_documenti_per_cliente(i)
