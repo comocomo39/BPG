@@ -8,8 +8,14 @@ import json
 
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
-# Configura la tua chiave API direttamente nel codice
-API_KEY = 'AIzaSyA19DrGWJWHE1Z-ggCzRKfopbmduLFv_mk'
+# Funzione per leggere la chiave API dal file API_KEY.txt
+def read_api_key(file_path):
+    with open(file_path, 'r') as file:
+        return file.read().strip()
+
+# Leggi la chiave API dal file
+API_KEY_PATH = 'API_KEY.txt'
+API_KEY = read_api_key(API_KEY_PATH)
 
 # Configurazione della libreria Google Generative AI con la chiave API
 genai.configure(api_key=API_KEY)
