@@ -56,13 +56,23 @@ def analyze_file_with_gemini(image=None, extracted_text=None, is_image=False):
             - Numero di fattura
             - Nome dell'emittente della fattura
             - Data della fattura
-        - Se il file è di un altro tipo di documento (es. contratto, certificato, ecc.), identifica il tipo e cerca di estrarre i dati rilevanti.
-
+        - Se il file è una ricevuta, estrai i seguenti dati:
+            - Numero di ricevuta
+            - Nome del cliente
+            - Data del pagamento
+            - Importo pagato
+        - Se il file è un contratto, estrai i seguenti dati:
+            - ID Contratto
+            - Nome del dipendente
+            - Posizione lavorativa
+            - Data di inizio e durata del contratto
+            
     2. Rinomina del File:
         - Se il file è una carta d'identità, rinomina il file nel formato: 'cid_Nome_Cognome'.
         - Se il file è una fattura, rinomina il file nel formato: 'fattura_Numero'.
-        - Per altri tipi di documenti, rinomina il file con il tipo di documento e, se possibile, con altre informazioni identificative.
-
+        - Se il file è un contratto, rinomina il file nel formato: 'contratto_Numero'.
+        - Se il file è una ricevuta, rinomina il file nel formato: 'ricevuta_Numero'.
+        
     3. Struttura dei Dati Utente:
         - Restituisci le informazioni sull'utente (nome, cognome e altri dati rilevanti) in un formato JSON, che includa anche il nuovo nome del file.
 
@@ -83,7 +93,11 @@ def analyze_file_with_gemini(image=None, extracted_text=None, is_image=False):
 
                 try:
                     json_data = json.loads(content_text.split('```json')[1].split('```')[0])
-                    return json_data
+
+                    if json_data:
+                        # Determina il tipo di documento e aggiungilo al JSON
+                        return json_data
+
                 except json.JSONDecodeError as json_error:
                     print(f"Errore nel parsing del JSON: {json_error}")
                     return None
@@ -97,6 +111,7 @@ def analyze_file_with_gemini(image=None, extracted_text=None, is_image=False):
     except Exception as e:
         print(f"Errore durante l'analisi con Gemini: {str(e)}")
         return None
+
 
 
 def extract_text_from_image(file_path):
@@ -148,9 +163,50 @@ def process_file(file_path):
         print(f"File rinominato e spostato in: {new_file_path}")
         messagebox.showinfo("Successo", f"File rinominato e spostato in: {new_file_path}")
 
+        if analysis_response:
+            analysis_response['percorso_file'] = new_file_path  # Imposta il percorso del file rinominato
+
+        update_json_file_based_on_rename(analysis_response, new_file_path)
+
+
     except Exception as e:
         print(f"Errore durante l'elaborazione del file: {str(e)}")
         messagebox.showerror("Errore", f"Si è verificato un errore: {str(e)}")
+
+def extract_name_and_surname(full_name):
+    # Prova a dividere il nome completo se è presente
+    if full_name:
+        parts = full_name.split()
+        if len(parts) == 2:
+            return parts[0], parts[1]  # nome, cognome
+    return full_name, None
+
+def update_json_file_based_on_rename(analysis_data, new_file_name):
+    # Determina il file JSON in base alla rinominazione
+    if "fattura" in new_file_name:
+        json_file = 'fatture.json'
+    elif "ricevuta" in new_file_name:
+        json_file = 'ricevute.json'
+    elif "contratto" in new_file_name:
+        json_file = 'contratti.json'
+    else:
+        json_file = 'altri_documenti.json'
+
+    # Verifica se il file JSON esiste già
+    if os.path.exists(json_file):
+        with open(json_file, 'r') as file:
+            data = json.load(file)
+    else:
+        data = []
+
+    # Aggiungi i nuovi dati al JSON esistente
+    data.append(analysis_data)
+
+    # Salva nuovamente nel file JSON
+    with open(json_file, 'w') as file:
+        json.dump(data, file, indent=4)
+
+    print(f"Dati aggiornati nel file {json_file}")
 
 
 def rename_and_organize_file(file_path, analysis_result):
@@ -161,8 +217,19 @@ def rename_and_organize_file(file_path, analysis_result):
         print("Analisi del file fallita. Impossibile rinominare il file.")
         return None
 
+    # Controllo sui dati di 'nome' e 'cognome'
+    nome = analysis_result.get('nome')
+    cognome = analysis_result.get('cognome')
+
+    # Se nome è presente ma cognome è assente, proviamo a dividere il nome completo
+    if nome and not cognome:
+        nome, cognome = extract_name_and_surname(nome)
+
+    if nome is None or cognome is None:
+        print(f"Attenzione: Nome o cognome mancanti nell'analisi del file {file_path}.")
+
     new_file_name = analysis_result.get('nuovo_nome_file', 'documento_sconosciuto')
-    user_info = f"{analysis_result.get('nome', 'utente')}_{analysis_result.get('cognome', 'sconosciuto')}"
+    user_info = f"{nome if nome else 'utente'}_{cognome if cognome else 'sconosciuto'}"
 
     user_folder = f"./documenti/{user_info}"
     os.makedirs(user_folder, exist_ok=True)
@@ -171,17 +238,28 @@ def rename_and_organize_file(file_path, analysis_result):
     new_file_path = os.path.join(user_folder, f"{new_file_name}{ext}")
     shutil.move(file_path, new_file_path)
 
+    update_json_file_based_on_rename(analysis_result, new_file_name)
+
     return new_file_path
 
 
-def open_file_dialog():
-    root = Tk()
-    root.withdraw()
-    file_path = filedialog.askopenfilename(title="Seleziona un file",
-                                           filetypes=[("Immagini e file di testo", "*.png;*.jpg;*.jpeg;*.tiff;*.txt")])
 
-    if file_path:
-        process_file(file_path)
+def open_file_dialog():
+    while True:
+        root = Tk()
+        root.withdraw()
+        file_path = filedialog.askopenfilename(title="Seleziona un file",
+                                               filetypes=[
+                                                   ("Immagini e file di testo", "*.png;*.jpg;*.jpeg;*.tiff;*.txt")])
+
+        if file_path:
+            process_file(file_path)
+
+        # Chiedi all'utente se vuole continuare o uscire
+        choice = input("Vuoi selezionare un altro file? (y/n): ").lower()
+        if choice != 'y':
+            print("Chiusura del programma.")
+            break
 
 
 if __name__ == "__main__":
