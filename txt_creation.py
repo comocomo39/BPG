@@ -46,7 +46,7 @@ def genera_contratto(customer_id):
     Azienda: {azienda}
     Nome: {nome}
     Posizione: {posizione}
-    Stipendio annuale: €{stipendio_annuale}
+    Stipendio annuale: {stipendio_annuale} Euro
     Data inizio: {data_inizio}
     Durata: {durata_mesi} mesi
 
@@ -82,9 +82,9 @@ def genera_fattura(customer_id):
     Data di emissione: {data_emissione}
 
     Prodotto: {prodotto}
-    Quantità: {quantita}
-    Prezzo unitario: €{prezzo_unitario}
-    Totale: €{totale}
+    Quantita': {quantita}
+    Prezzo unitario: {prezzo_unitario} Euro
+    Totale: {totale} Euro
 
     Grazie per aver scelto {azienda}!
     """
@@ -110,7 +110,7 @@ def genera_ricevuta_pagamento(customer_id, numero_fattura):
     Cliente: {nome}
     Azienda: {azienda}
     Data del pagamento: {data_pagamento}
-    Importo pagato: €{importo_pagato}
+    Importo pagato: {importo_pagato} Euro
 
     Fattura di riferimento: {numero_fattura}
 

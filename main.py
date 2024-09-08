@@ -56,6 +56,8 @@ def analyze_file_with_gemini(image=None, extracted_text=None, is_image=False):
             - Numero di fattura
             - Nome dell'emittente della fattura
             - Data della fattura
+            - Prezzo unitario
+            - Quantita'
         - Se il file è una ricevuta, estrai i seguenti dati:
             - Numero di ricevuta
             - Nome del cliente
@@ -66,6 +68,7 @@ def analyze_file_with_gemini(image=None, extracted_text=None, is_image=False):
             - Nome del dipendente
             - Posizione lavorativa
             - Data di inizio e durata del contratto
+            - Stipendio annuale
             
     2. Rinomina del File:
         - Se il file è una carta d'identità, rinomina il file nel formato: 'cid_Nome_Cognome'.
@@ -167,7 +170,7 @@ def process_file(file_path):
             analysis_response['percorso_file'] = new_file_path  # Imposta il percorso del file rinominato
 
         update_json_file_based_on_rename(analysis_response, new_file_path)
-
+        return new_file_path, analysis_response
 
     except Exception as e:
         print(f"Errore durante l'elaborazione del file: {str(e)}")
@@ -250,22 +253,105 @@ def rename_and_organize_file(file_path, analysis_result):
 
     return new_file_path
 
+#######################
+#######################
+#######################
+
+from tkinter import Tk, filedialog, messagebox, ttk, StringVar
+import threading
+import os
+
+
+# Aggiungiamo una nuova finestra con tabella e barra di progresso
+def create_gui():
+    root = Tk()
+    root.title("Gestione Documenti")
+    root.geometry("800x500")
+
+    # Aggiungi una label per il titolo
+    title_label = ttk.Label(root, text="Processamento Documenti", font=("Helvetica", 16))
+    title_label.pack(pady=10)
+
+    # Aggiungiamo la tabella per visualizzare i risultati
+    columns = ("Nome File", "Stato", "Dettagli", "Nuovo Nome File")
+    table = ttk.Treeview(root, columns=columns, show="headings")
+    table.heading("Nome File", text="Nome File")
+    table.heading("Stato", text="Stato")
+    table.heading("Dettagli", text="Dettagli")
+    table.heading("Nuovo Nome File", text="Nuovo Nome File")
+    table.pack(expand=True, fill="both", padx=10, pady=10)
+
+    # Aggiungiamo una barra di progresso
+    progress_var = StringVar()
+    progress_bar = ttk.Progressbar(root, orient="horizontal", length=300, mode="determinate")
+    progress_bar.pack(pady=10)
+
+    progress_label = ttk.Label(root, textvariable=progress_var)
+    progress_label.pack(pady=5)
+
+    # Aggiungi un pulsante per avviare il caricamento dei file
+    load_button = ttk.Button(root, text="Seleziona File",
+                             command=lambda: select_file(table, progress_bar, progress_var))
+    load_button.pack(pady=10)
+
+    root.mainloop()
+
+
+def process_file_with_progress(file_path, table, progress_bar, progress_var):
+    progress_var.set("Elaborazione in corso...")
+    progress_bar.start()
+
+    # Aggiungi un log del file in fase di elaborazione
+    print(f"Elaborazione del file: {file_path}")
+
+    # Processa il file e ottieni l'analisi
+    new_file_path, analysis_response = process_file(file_path)
+
+    # Aggiorna la tabella con lo stato di successo e il percorso del file
+    if new_file_path:
+        new_file_name = os.path.basename(new_file_path)  # Prende solo il nome del file dal percorso completo
+        file_dir = new_file_path
+        status = "Completato"
+    else:
+        new_file_name = 'Analisi fallita: Nessun nome estratto'
+        file_dir = "Percorso non disponibile"
+        status = "Errore"
+
+    table.insert("", "end", values=(
+        os.path.basename(file_path),  # Nome file originale
+        status,
+        file_dir,  # Mostra il percorso completo dove il file è stato spostato
+        new_file_name  # Mostra il nuovo nome del file
+    ))
+
+    progress_bar.stop()
+    progress_var.set("Elaborazione completata.")
+
+    # Stampa il percorso corretto del file rinominato
+    print(f"File spostato e rinominato come: {new_file_name}")
+    print(f"Percorso file: {file_dir}")
+
+
+# Selezione file con gestione della UI
+def select_file(table, progress_bar, progress_var):
+    file_path = filedialog.askopenfilename(
+        title="Seleziona un file",
+        filetypes=[("Immagini e file di testo", "*.png;*.jpg;*.jpeg;*.tiff;*.txt")]
+    )
+
+    if file_path:
+        # Usa thread per evitare il blocco della UI durante l'elaborazione
+        threading.Thread(target=process_file_with_progress, args=(file_path, table, progress_bar, progress_var)).start()
+
+
+# Modifica il metodo di apertura del file dialog nel main
 def open_file_dialog():
-    while True:
-        root = Tk()
-        root.withdraw()
-        file_path = filedialog.askopenfilename(title="Seleziona un file",
-                                               filetypes=[
-                                                   ("Immagini e file di testo", "*.png;*.jpg;*.jpeg;*.tiff;*.txt")])
+    create_gui()
 
-        if file_path:
-            process_file(file_path)
 
-        # Chiedi all'utente se vuole continuare o uscire
-        choice = input("Vuoi selezionare un altro file? (y/n): ").lower()
-        if choice != 'y':
-            print("Chiusura del programma.")
-            break
+#######################
+#######################
+#######################
 
 
 if __name__ == "__main__":
