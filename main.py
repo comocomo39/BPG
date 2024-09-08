@@ -199,6 +199,16 @@ def update_json_file_based_on_rename(analysis_data, new_file_name):
     else:
         data = []
 
+    # Imposta il numero di protocollo (incrementa rispetto al massimo esistente)
+    if data:
+        max_protocollo = max([doc.get('protocollo', 0) for doc in data])
+    else:
+        max_protocollo = 0
+
+    # Aggiungi il numero di protocollo al nuovo documento
+    analysis_data['protocollo'] = max_protocollo + 1
+
+
     # Aggiungi i nuovi dati al JSON esistente
     data.append(analysis_data)
 
@@ -238,11 +248,7 @@ def rename_and_organize_file(file_path, analysis_result):
     new_file_path = os.path.join(user_folder, f"{new_file_name}{ext}")
     shutil.move(file_path, new_file_path)
 
-    update_json_file_based_on_rename(analysis_result, new_file_name)
-
     return new_file_path
-
-
 
 def open_file_dialog():
     while True:
