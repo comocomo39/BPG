@@ -5,6 +5,7 @@ from PIL import Image
 import google.generativeai as genai
 from tkinter import Tk, filedialog, messagebox
 import json
+import PyPDF2
 
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
@@ -143,6 +144,23 @@ def extract_text_from_txt(file_path):
         return ""
 
 
+
+def extract_text_from_pdf(file_path):
+    """
+    Estrae il testo da un file PDF.
+    """
+    try:
+        with open(file_path, 'rb') as file:
+            reader = PyPDF2.PdfReader(file)
+            text = ""
+            for page in range(len(reader.pages)):
+                text += reader.pages[page].extract_text()
+        return text
+    except Exception as e:
+        print(f"Errore durante l'estrazione del testo dal PDF: {str(e)}")
+        return ""
+
+
 def process_file(file_path):
     """
     Gestisce l'intero processo: analisi del file, rinomina e organizzazione.
@@ -152,6 +170,9 @@ def process_file(file_path):
         if file_path.endswith('.txt'):
             extracted_text = extract_text_from_txt(file_path)
             file_content = None  # I file di testo non necessitano di essere passati come contenuto
+        elif file_path.endswith('.pdf'):
+            extracted_text = extract_text_from_pdf(file_path)
+            file_content = None  # I file PDF non necessitano di contenuto immagine
         else:
             extracted_text, img = extract_text_from_image(file_path)
             file_content = img  # Passiamo l'immagine come oggetto PIL
@@ -336,7 +357,7 @@ def process_file_with_progress(file_path, table, progress_bar, progress_var):
 def select_file(table, progress_bar, progress_var):
     file_path = filedialog.askopenfilename(
         title="Seleziona un file",
-        filetypes=[("Immagini e file di testo", "*.png;*.jpg;*.jpeg;*.tiff;*.txt")]
+        filetypes=[("Documenti", "*.png;*.jpg;*.jpeg;*.tiff;*.txt;*.pdf")]
     )
 
     if file_path:
